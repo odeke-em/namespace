@@ -53,6 +53,10 @@ func Parse(r io.Reader) (Namespace, error) {
 	// key=value
 	lines := fread.Fread(r)
 
+	return ParseCh(lines)
+}
+
+func ParseCh(lines <-chan string) (Namespace, error) {
 	type nsSetter func(values ...string)
 	ns := make(Namespace)
 	makeNSSetter := func(nsKeys ...string) nsSetter {
