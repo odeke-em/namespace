@@ -48,15 +48,23 @@ func classify(line string) type_ {
 type Namespace map[string][]string
 
 func Parse(r io.Reader) (Namespace, error) {
-	// Expecting the form
-	// [command]
-	// key=value
-	lines := fread.Fread(r)
-
-	return ParseCh(lines)
+	return ParseWithHeaderDelimiter(r, commonCommandDelim)
 }
 
 func ParseCh(lines <-chan string) (Namespace, error) {
+	return ParseChWithHeaderDelimiter(lines, commonCommandDelim)
+}
+
+func ParseWithHeaderDelimiter(r io.Reader, hdrDelim string) (Namespace, error) {
+	// Expecting the form
+	// [command]
+	// key=value
+	linesChan := fread.Fread(r)
+
+	return ParseChWithHeaderDelimiter(linesChan, hdrDelim)
+}
+
+func ParseChWithHeaderDelimiter(lines <-chan string, hdrDelim string) (Namespace, error) {
 	type nsSetter func(values ...string)
 	ns := make(Namespace)
 	makeNSSetter := func(nsKeys ...string) nsSetter {
@@ -80,7 +88,7 @@ func ParseCh(lines <-chan string) (Namespace, error) {
 
 		switch typ {
 		case tNamespace:
-			namespaceKeys, err := parseOutNamespaceHeaders(line)
+			namespaceKeys, err := parseOutNamespaceHeaders(line, hdrDelim)
 			if err != nil {
 				return nil, err
 			}
@@ -104,7 +112,7 @@ func parseOutClause(line string) (string, error) {
 	return line, nil
 }
 
-func parseOutNamespaceHeaders(line string) ([]string, error) {
+func parseOutNamespaceHeaders(line, hdrDelim string) ([]string, error) {
 	line = strings.TrimSpace(line)
 	lbc, rbc := strings.Count(line, lBrace), strings.Count(line, rBrace)
 	if lbc != 1 {
@@ -119,7 +127,7 @@ func parseOutNamespaceHeaders(line string) ([]string, error) {
 	}
 	namespaceName := line[lbi+1 : rbi]
 
-	splits := strings.Split(namespaceName, commonCommandDelim)
+	splits := strings.Split(namespaceName, hdrDelim)
 	return prepareNamespaceKeys(splits), nil
 }
 
